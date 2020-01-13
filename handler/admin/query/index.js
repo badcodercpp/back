@@ -4,12 +4,12 @@ const doAdminStuffs = (req, res) => {
     const parsedBody = req.body;
     const query =  _get(parsedBody, 'query', {}) || {};
     console.log("query", parsedBody)
-    connection.connect()
+    // connection.connect()
     connection.query(query, function (error, results, fields) {
         if (error) throw error;
         console.log('The solution is: ', results);
     });
-    connection.end();
+    // connection.end();
     console.log("req body", parsedBody);
     res.send("done");
 }

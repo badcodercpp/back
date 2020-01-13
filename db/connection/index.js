@@ -1,9 +1,9 @@
 const mysql      = require('mysql');
 const connection = mysql.createConnection({
-  host     : 'db4free.net',
-  user     : 'bjshub',
-  password : 'Bjshub@123',
-  database : 'bjshub'
+  host     : 'remotemysql.com',
+  user     : 'mRbw5S83aw',
+  password : 'WYyAzmQcj7',
+  database : 'mRbw5S83aw'
 });
 
 export default connection;

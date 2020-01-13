@@ -1,30 +1,96 @@
-import connection from '../../db/connection';
+// import connection from '../../db/connection';
 import _get from 'lodash/get';
+import _head from 'lodash/head';
+import _isEmpty from 'lodash/isEmpty';
+import addEmail from './addEmail';
+import addPhone from './addPhone';
+import addBoth from './addBoth';
+import checkIfUserExists from './checkIfUserExists';
+import { identity } from '../../utils/identity';
+import { encrypt } from '../../crypto/exports';
+import { getKeys } from '../../utils/getSignKeys';
+import cryptoConst from '../../cryptoNode/config/constants';
+const uuidv1 = require('uuid/v1');
+const jwt = require('jsonwebtoken');
 
 const doSignup = (req, res) => {
     const parsedBody = req.body || {};
-    console.log("parsedBody", parsedBody)
-    const isEperienced = _get(parsedBody, 'isEperienced', {}) || {};
-    const signupFirstTab = _get(parsedBody, 'signupFirstTab', {}) || {};
-    const signupSecondTab = _get(parsedBody, 'signupSecondTab', {}) || {};
-    const signupThirdTab = _get(parsedBody, 'signupThirdTab', {}) || {};
-    const signupFourthTab = _get(parsedBody, 'signupFourthTab', {}) || {};
-    const signupMandatory = _get(parsedBody, 'signupMandatory', {}) || {};
-    const id = Date.now().toString();
-    const email = _get(signupFirstTab, 'email', 'badcodercpp@gmail.com') || 'badcodercpp@gmail.com';
-    const password = _get(signupFirstTab, 'passsword', 'bjs@123') || 'bjs@123';
-    const name = _get(signupMandatory, 'name', 'bad coder') || 'bad coder';
-    const mobileNo  = _get(signupMandatory, 'mobile', '9836648105') || '9836648105';
-    const location = _get(signupFirstTab, 'location', 'bangalore') || 'bangalore';
-    const resume = _get(signupFirstTab, 'resume', '') || ''
-    connection.connect()
-    connection.query(`INSERT INTO BJS_SIGNUP(id, name, email_id, password, mobile_no, location, resume) VALUES(${id}, ${name}, ${email}, ${password}, ${mobileNo}, ${location}, ${resume})`, function (error, results, fields) {
-        if (error) throw error;
-        console.log('The solution is: ', results);
-    });
-    connection.end();
-    console.log("req body", parsedBody);
-    res.send("done");
+    const fName = _get(parsedBody, 'fName');
+    const lName = _get(parsedBody, 'lName');
+    const phone = _get(parsedBody, 'phone');
+    const Captcha = _get(parsedBody, 'Captcha');
+    const pContact = _get(parsedBody, 'pContact', false) || false;
+    const pContact_email = _get(parsedBody, 'pContact_email', false) || false;
+    const agreement = _get(parsedBody, 'agreement', false) || false;
+    const password = _get(parsedBody, 'password');
+    const email = _get(parsedBody, 'email');
+    const confirm = _get(parsedBody, 'confirm');
+    const otp = _get(parsedBody, 'otp');
+    const gender = _get(parsedBody, 'gender');
+    const expertise = _get(parsedBody, 'expertise');
+    const id = uuidv1();
+    // connection.connect()
+
+    const options = {
+        fName,
+        lName,
+        phone,
+        Captcha,
+        pContact,
+        pContact_email,
+        agreement,
+        password,
+        confirm,
+        otp,
+        id,
+        email, 
+        gender, 
+        expertise, 
+    }
+    const k = getKeys(options);
+    const { key, iv } = cryptoConst;
+    checkIfUserExists(email, phone, k).then((user = {}) => {
+        console.log("user", user)
+        const userId = _get(user, 'id')
+        if (_isEmpty(userId)) {
+            const resp = {
+                id, 
+                fName, 
+                lName, 
+                phone, 
+                email, 
+            }
+            const respData = identity(resp);
+            const useragent = _get(req, 'useragent', {}) || {};
+            const respWithUserAgent = { ...respData, ...useragent };
+            const token = jwt.sign(respWithUserAgent, 'kashish');
+            // const encryptedToken = encrypt(token);
+            options.hash = token;
+            if (!_isEmpty(email) && !_isEmpty(phone)) {
+                return addBoth(req, res, options, k, key, iv);
+            } else if (!_isEmpty(email) && _isEmpty(phone)) {
+                return addEmail(req, res, options, k, key, iv);
+            } else if (_isEmpty(email) && !_isEmpty(phone)) {
+                return addPhone(req, res, options, k, key, iv);
+            } else {
+                res.status(500);
+                res.statusMessage = JSON.stringify({error: `something went wrong trace - ${err}`});
+                res.send({error: `something went wrong trace - ${err}`});
+            }
+        }
+    }).catch((err) => {
+        console.log("err", err)
+        const userId = _get(err, 'id');
+        if (!_isEmpty(userId)) {
+            res.status(500);
+            res.statusMessage = JSON.stringify({error: `user already exist - ${userId}`})
+            res.send({error: `user already exist - ${userId}`});
+        } else {
+            res.status(500);
+            res.statusMessage = JSON.stringify({error: `something went wrong trace - ${err}`});
+            res.send({error: `something went wrong trace - ${err}`});
+        }
+    })
 }
 
 export default doSignup;
