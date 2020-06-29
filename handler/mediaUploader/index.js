@@ -4,7 +4,7 @@ import _isEqual from 'lodash/isEqual';
 import _isEmpty from 'lodash/isEmpty';
 import { doLogin as login } from '../../db/connection/mongo/auth/login';
 
-const doLogin = (req, res) => {
+const doUploadMedia = (req, res) => {
     const parsedBody = req.body || {};
     const phone = _get(parsedBody, 'phone');
     const auth = _get(parsedBody, 'password');
@@ -41,4 +41,4 @@ const doLogin = (req, res) => {
     });
 }
 
-export default doLogin;
+export default doUploadMedia;

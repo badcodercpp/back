@@ -6,31 +6,10 @@ import doGetMapData from './handler/mapData';
 import doGetProfile from './handler/profile';
 import doGetUserDetails from './handler/details/user';
 import { checkToken } from './middleware/token';
-import { encrypt, decrypt } from './cryptoNode/exports';
-import cryptoConst from './cryptoNode/config/constants';
-
 const path = require('path');
 const bodyParser = require('body-parser')
-const csrf = require('csurf')
-const cookieParser = require('cookie-parser')
 const useragent = require('express-useragent');
-const csrfProtection = csrf({ cookie: true })
-// create application/json parser
 const jsonParser = bodyParser.json();
-
-const { key, iv } = cryptoConst;
-console.log("key", key, iv)
-const d = encrypt("ajaykrjha93@gmail.com", key, iv)
-console.log(d);
-const k = Buffer.from(d.key, 'hex');
-const i = Buffer.from(d.iv, 'hex');
-const dt = d.encryptedData;
-const e = decrypt(dt, k, i);
-console.log("e")
-console.log(e)
-
-// create application/x-www-form-urlencoded parser
-const urlencodedParser = bodyParser.urlencoded({ extended: false })
 const PORT = process.env.PORT || 5000
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')))
@@ -44,10 +23,6 @@ app.use(function(req, res, next) {
 });
 
 app.use(useragent.express());
-
-// app.use(cookieParser())
-
-// app.use(csrf());
 
 app.get('/test', (req, res) => {
   res.send('hello world')
@@ -75,6 +50,10 @@ app.post('/profile/:id', jsonParser, (req, res) => {
 
 app.post('/userDetails', jsonParser, checkToken, (req, res) => {
   return  doGetUserDetails(req, res);
+})
+
+app.post('/uploadMedia', jsonParser, checkToken, (req, res) => {
+  return  doUploadMedia(req, res);
 })
 
 app.listen(PORT, () => console.log(`Listening on ${ PORT }`))

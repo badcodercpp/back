@@ -1,17 +1,8 @@
-// import connection from '../../db/connection';
 import _get from 'lodash/get';
 import _head from 'lodash/head';
 import _isEmpty from 'lodash/isEmpty';
-import addEmail from './addEmail';
-import addPhone from './addPhone';
-import addBoth from './addBoth';
-import checkIfUserExists from './checkIfUserExists';
-import { identity } from '../../utils/identity';
-import { encrypt } from '../../crypto/exports';
-import { getKeys } from '../../utils/getSignKeys';
-import cryptoConst from '../../cryptoNode/config/constants';
+import { doSignUp as signup } from '../../db/connection/mongo/auth/signup';
 const uuidv1 = require('uuid/v1');
-const jwt = require('jsonwebtoken');
 
 const doSignup = (req, res) => {
     const parsedBody = req.body || {};
@@ -28,13 +19,12 @@ const doSignup = (req, res) => {
     const otp = _get(parsedBody, 'otp');
     const gender = _get(parsedBody, 'gender');
     const expertise = _get(parsedBody, 'expertise');
-    const id = uuidv1();
-    // connection.connect()
+    const badId = uuidv1();
 
     const options = {
         fName,
         lName,
-        phone,
+        mobile: phone,
         Captcha,
         pContact,
         pContact_email,
@@ -42,45 +32,26 @@ const doSignup = (req, res) => {
         password,
         confirm,
         otp,
-        id,
+        badId,
         email, 
         gender, 
         expertise, 
     }
-    const k = getKeys(options);
-    const { key, iv } = cryptoConst;
-    checkIfUserExists(email, phone, k).then((user = {}) => {
-        console.log("user", user)
-        const userId = _get(user, 'id')
-        if (_isEmpty(userId)) {
-            const resp = {
-                id, 
-                fName, 
-                lName, 
-                phone, 
-                email, 
-            }
-            const respData = identity(resp);
-            const useragent = _get(req, 'useragent', {}) || {};
-            const respWithUserAgent = { ...respData, ...useragent };
-            const token = jwt.sign(respWithUserAgent, 'kashish');
-            // const encryptedToken = encrypt(token);
-            options.hash = token;
-            if (!_isEmpty(email) && !_isEmpty(phone)) {
-                return addBoth(req, res, options, k, key, iv);
-            } else if (!_isEmpty(email) && _isEmpty(phone)) {
-                return addEmail(req, res, options, k, key, iv);
-            } else if (_isEmpty(email) && !_isEmpty(phone)) {
-                return addPhone(req, res, options, k, key, iv);
-            } else {
-                res.status(500);
-                res.statusMessage = JSON.stringify({error: `something went wrong trace - ${err}`});
-                res.send({error: `something went wrong trace - ${err}`});
-            }
+
+    signup(options, req, res).then((data) => {
+        if (!_isEmpty(data)) {
+            const d = {
+                data: "done",
+                token: data
+            };
+            res.send(d);
+        } else {
+            res.status(500);
+            res.statusMessage = JSON.stringify({error: `something went wrong`});
+            res.send(`something went wrong trace - `);
         }
     }).catch((err) => {
-        console.log("err", err)
-        const userId = _get(err, 'id');
+        const userId = _get(err, 'badId');
         if (!_isEmpty(userId)) {
             res.status(500);
             res.statusMessage = JSON.stringify({error: `user already exist - ${userId}`})
@@ -90,7 +61,7 @@ const doSignup = (req, res) => {
             res.statusMessage = JSON.stringify({error: `something went wrong trace - ${err}`});
             res.send({error: `something went wrong trace - ${err}`});
         }
-    })
+    });
 }
 
 export default doSignup;
